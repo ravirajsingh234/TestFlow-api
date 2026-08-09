@@ -19,24 +19,15 @@ jobs:
         steps:
             - name: checkout repository
               uses: actions/checkout@v4
-            - name: Check GitHub secret
-              run: |
-                    if [ -z "${{ secrets.DB_NAME }}" ]; then
-                        echo "GitHub secret DB_NAME is EMPTY or NOT AVAILABLE"
-                        exit 1
-                    else
-                        echo "GitHub secret DB_NAME is available"
-                    fi
 
-            - name: Check environment variable
+            - name: Test DB_NAME secret
               run: |
-                if [ -z "$DB_NAME" ]; then
-                    echo "DB_NAME environment variable is NOT available"
-                    exit 1
+                if [ -z "${{ secrets.DB_NAME }}" ]; then
+                echo "SECRET IS EMPTY"
+                exit 1
                 else
-                    echo "DB_NAME environment variable is available"
+                echo "SECRET EXISTS"
                 fi
-
             - name: Build and start compose services
               run: |
                 docker compose up -d --build
