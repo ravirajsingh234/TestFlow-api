@@ -18,7 +18,16 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: checkout repository
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
+            - name: Check DB_NAME
+              run: |
+                if [ -z "$DB_NAME" ]; then
+                    echo "DB_NAME is NOT available"
+                    exit 1
+                else
+                    echo "DB_NAME is available"
+                fi
+
             - name: Build and start compose services
               run: |
                 docker compose up -d --build
