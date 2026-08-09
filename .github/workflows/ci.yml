@@ -15,7 +15,39 @@ jobs:
         steps:
             - name: checkout repository
               uses: actions/checkout@v3
-            - name: Build Docker image
+            - name: Build and start compose services
               run: |
-                docker build -t testflow-api:${{ github.sha }} .
+                docker composeup -d --build
+            - name: Verify Compose services
+              run: | 
+                docker compose ps
+            - name: Check API health
+              run: | 
+                curl --fail http://localhost:8000/health
+            - name: Show Compose logs
+              if : failure()
+              run: | 
+                docker compose logs
+            - name: Stop and remove compose services
+              if: always()
+              run: | 
+                docker compose down -v
+    trivy-scan:
+        name: Trivy Vulnerability Scan
+        needs: [build]
+        runs-on: ubuntu-latest
+        steps: 
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Build Docker image for scanning
+              run: |
+                docker build -t testflow-api:latest .
+            - name: Run Trivy vulnerability scanner
+              uses: aquasecurity/trivy-action@master
+              with:
+                image-ref: 'testflow-api:latest'
+                format: 'table'
+                exit-code: '1'
+                ignore-unfixed: true
+                severity: 'CRITICAL,HIGH'
                 
