@@ -14,18 +14,11 @@ The application is packaged using a multi-stage Docker build and can be run loca
 - `docker-compose.yml` — defines `api`, `postgres`, and `redis` services.
 - `app/` — FastAPI application code, including models, schemas, database connectivity, and Redis helper code.
 - `requirements.txt` — Python dependencies for the app.
-- `.env` — environment variables for local Compose development.
 
 ## Setup
 
 1. Install Docker Desktop.
-2. Create or update `.env` with your Postgres credentials:
-
-```env
-DB_USER=postgres
-DB_PASSWORD=password
-DB_NAME=testflow
-```
+2. Configure your Postgres credentials for Docker Compose.
 
 3. Build and run with Docker Compose:
 
@@ -37,28 +30,9 @@ The API will be available at `http://localhost:8000`.
 
 ## Docker-only run
 
-To run the app image directly without Compose, build the image and pass database environment variables:
-
-```bash
-docker build --no-cache -t testflow-api:1.0 .
-docker run --rm -p 8000:8000 \
-  -e DB_HOST=host.docker.internal \
-  -e DB_PORT=5432 \
-  -e DB_USER=postgres \
-  -e DB_PASSWORD=password \
-  -e DB_NAME=testflow \
-  testflow-api:1.0
-```
+To run the app image directly without Compose, build the image and configure your runtime environment variables separately.
 
 > Note: direct Docker run requires a running PostgreSQL instance accessible from the container.
-
-## Environment variables
-
-- `DB_USER` — Postgres username
-- `DB_PASSWORD` — Postgres password
-- `DB_HOST` — Postgres host (`postgres` for Compose, `host.docker.internal` when using host DB)
-- `DB_PORT` — Postgres port
-- `DB_NAME` — database name
 
 ## Architecture
 
