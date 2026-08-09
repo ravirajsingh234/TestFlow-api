@@ -1,0 +1,40 @@
+# Python
+*.py[cod]
+__pycache__/
+.pytest_cache/
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Docker / local environment
+.env
+.env.*
+docker-compose.override.yml
+
+# Git metadata
+.git
+.gitignore
+
+# Tests and temporary files
+tests/
+**/__pycache__/
