@@ -11,24 +11,15 @@ on:
 
 jobs:
     build:
-        env:
-            DB_USER: ${{ secrets.DB_USER }}
-            DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-            DB_HOST: ${{ secrets.DB_HOST }}
         runs-on: ubuntu-latest
         steps:
             - name: checkout repository
               uses: actions/checkout@v4
-
-            - name: Test DB_NAME secret
-              run: |
-                if [ -z "${{ secrets.DB_NAME }}" ]; then
-                echo "SECRET IS EMPTY"
-                exit 1
-                else
-                echo "SECRET EXISTS"
-                fi
             - name: Build and start compose services
+              env:
+                DB_USER: ${{ secrets.DB_USER }}
+                DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+                DB_HOST: ${{ secrets.DB_HOST }}
               run: |
                 docker compose up -d --build
             - name: Verify Compose services
