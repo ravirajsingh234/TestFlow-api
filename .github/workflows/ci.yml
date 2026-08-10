@@ -68,7 +68,11 @@ jobs:
                 docker build -t testflow-api:latest .
             - name: Run Trivy (JSON)
               run: |
-                docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.73.0 image --format json -o trivy-report.json testflow-api:latest || true
+                docker run --rm \
+                  -v /var/run/docker.sock:/var/run/docker.sock \
+                  -v "$PWD":/work \
+                  -w /work \
+                  aquasec/trivy:0.73.0 image --format json -o trivy-report.json testflow-api:latest || true
                 cat trivy-report.json || true
             - name: Count HIGH/CRITICAL findings
               id: trivy_count
