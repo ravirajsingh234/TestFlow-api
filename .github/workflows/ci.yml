@@ -30,9 +30,21 @@ jobs:
             - name: Verify Compose services
               run: | 
                 docker compose ps
-            - name: Check API health
-              run: | 
-                curl --fail http://localhost:8000/health
+            - name: Check API health (retry)
+              run: |
+                set -e
+                echo "Waiting for API to become healthy..."
+                for i in $(seq 1 12); do
+                  if curl --silent --fail http://localhost:8000/health; then
+                    echo "API healthy"
+                    exit 0
+                  fi
+                  echo "Attempt $i failed, sleeping 5s..."
+                  sleep 5
+                done
+                echo "API did not become healthy after retries. Showing api logs:" >&2
+                docker compose logs api --no-color --since 1m >&2 || true
+                exit 1
             - name: Show Compose logs
               if : failure()
               run: | 
