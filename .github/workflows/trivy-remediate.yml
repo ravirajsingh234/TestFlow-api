@@ -2,9 +2,6 @@ name: Trivy Scan and Remediation PR
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   trivy-scan-and-remediate:
