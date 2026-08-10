@@ -15,11 +15,16 @@ jobs:
         steps:
             - name: checkout repository
               uses: actions/checkout@v4
+            - name: Set env defaults
+              run: |
+                if [ -z "${{ secrets.DB_NAME }}" ]; then
+                  echo "DB_NAME=testflow" >> $GITHUB_ENV
+                else
+                  echo "DB_NAME=${{ secrets.DB_NAME }}" >> $GITHUB_ENV
+                fi
+                echo "DB_USER=${{ secrets.DB_USER }}" >> $GITHUB_ENV
+                echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
             - name: Build and start compose services
-              env:
-                DB_USER: ${{ secrets.DB_USER }}
-                DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-                DB_HOST: ${{ secrets.DB_HOST }}
               run: |
                 docker compose up -d --build
             - name: Verify Compose services
