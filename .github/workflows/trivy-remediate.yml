@@ -1,0 +1,76 @@
+name: Trivy Scan and Remediation PR
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  trivy-scan-and-remediate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t testflow-api:latest .
+
+      - name: Run Trivy (JSON + Markdown)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.73.0 image --format json -o trivy-report.json testflow-api:latest || true
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.73.0 image --format template --template "{{range .Results}}{{range .Vulnerabilities}}{{printf "- %s | %s | %s\n" .PkgName .VulnerabilityID .Severity}}{{end}}{{end}}" -o trivy-report.md testflow-api:latest || true
+          cat trivy-report.md || true
+
+      - name: Count HIGH/CRITICAL findings
+        id: count
+        run: |
+          install -m644 /dev/null /tmp/empty || true
+          if command -v jq >/dev/null 2>&1; then
+            COUNT=$(jq '[.Results[].Vulnerabilities[] | select(.Severity=="HIGH" or .Severity=="CRITICAL")] | length' trivy-report.json)
+          else
+            sudo apt-get update && sudo apt-get install -y jq
+            COUNT=$(jq '[.Results[].Vulnerabilities[] | select(.Severity=="HIGH" or .Severity=="CRITICAL")] | length' trivy-report.json)
+          fi
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+      - name: Commit and push reports
+        if: steps.count.outputs.count != '0'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b trivy/remediation-${{ github.run_id }}
+          git add trivy-report.json trivy-report.md || true
+          git commit -m "chore(trivy): add trivy report" || echo "no changes to commit"
+          git push --set-upstream origin trivy/remediation-${{ github.run_id }}
+
+      - name: Create remediation PR
+        if: steps.count.outputs.count != '0'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: trivy/remediation-${{ github.run_id }}
+          title: "chore: Trivy findings — remediation report"
+          body: |
+            Trivy detected HIGH/CRITICAL vulnerabilities in the image `testflow-api:latest`.
+
+            Attached files are included in this branch: `trivy-report.json` and `trivy-report.md`.
+
+            Suggested next steps:
+            - Upgrade the base image or switch to a newer Python tag.
+            - Pin and update Python dependencies in `requirements.txt`.
+            - Apply OS package upgrades in the `Dockerfile` (we already add `apt-get upgrade`).
+
+            Optionally enable `OPENAI_API_KEY` for LLM-assisted remediation proposals.
+          labels: security, trivy
+
+      - name: Upload Trivy report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: |
+            trivy-report.json
+            trivy-report.md

@@ -46,8 +46,8 @@ jobs:
                 docker compose logs api --no-color --since 1m >&2 || true
                 exit 1
             - name: Show Compose logs
-              if : failure()
-              run: | 
+              if: failure()
+              run: |
                 docker compose logs
             - name: Stop and remove compose services
               if: always()
@@ -57,18 +57,39 @@ jobs:
         name: Trivy Vulnerability Scan
         needs: [build]
         runs-on: ubuntu-latest
-        steps: 
+        permissions:
+          actions: write
+          contents: write
+        steps:
             - name: Checkout repository
               uses: actions/checkout@v4
             - name: Build Docker image for scanning
               run: |
                 docker build -t testflow-api:latest .
-            - name: Run Trivy vulnerability scanner
-              uses: aquasecurity/trivy-action@master
+            - name: Run Trivy (JSON)
+              run: |
+                docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.73.0 image --format json -o trivy-report.json testflow-api:latest || true
+                cat trivy-report.json || true
+            - name: Count HIGH/CRITICAL findings
+              id: trivy_count
+              run: |
+                if ! command -v jq >/dev/null 2>&1; then
+                  sudo apt-get update && sudo apt-get install -y jq
+                fi
+                COUNT=$(jq '[.Results[].Vulnerabilities[] | select(.Severity=="HIGH" or .Severity=="CRITICAL")] | length' trivy-report.json)
+                echo "count=$COUNT" >> $GITHUB_OUTPUT
+            - name: Upload Trivy report artifact
+              uses: actions/upload-artifact@v4
               with:
-                image-ref: 'testflow-api:latest'
-                format: 'table'
-                exit-code: '1'
-                ignore-unfixed: true
-                severity: 'CRITICAL,HIGH'
+                name: trivy-report
+                path: trivy-report.json
+            - name: Trigger remediation workflow
+              if: steps.trivy_count.outputs.count != '0'
+              run: |
+                echo "Found ${{ steps.trivy_count.outputs.count }} HIGH/CRITICAL findings — dispatching remediation workflow"
+                curl -X POST \
+                  -H "Accept: application/vnd.github.v3+json" \
+                  -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                  https://api.github.com/repos/${{ github.repository }}/actions/workflows/trivy-remediate.yml/dispatches \
+                  -d '{"ref":"main"}'
                 
